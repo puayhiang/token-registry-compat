@@ -1,2 +1,2 @@
-export { TitleEscrowCloneable, TitleEscrowCloner, TitleEscrowClonerFactory, TitleEscrowCloneableFactory } from './TitleEscrow';
-export { TradeTrustERC721, TradeTrustERC721Factory } from './TradeTrustERC721';
+// export { TitleEscrowCloneable, TitleEscrowCloner, TitleEscrowClonerFactory, TitleEscrowCloneableFactory } from './TitleEscrow';
+export { TokenRegistryCompat, TokenRegistryFactory } from './TradeTrustERC721';

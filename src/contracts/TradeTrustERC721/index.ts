@@ -1,2 +1,2 @@
-export { TradeTrustERC721Factory } from './TradeTrustERC721Factory';
-export { TradeTrustERC721 } from './TradeTrustERC721';
+export { TokenRegistryFactory } from './TokenRegistryFactory';
+export { TokenRegistryCompat } from './TokenRegistryCompat';

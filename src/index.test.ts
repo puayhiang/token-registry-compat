@@ -116,3 +116,10 @@
 //     expect(ownerOfToken).toBe(account1);
 //   });
 // });
+
+import { providers } from 'ethers';
+import { TokenRegistryFactory } from './contracts';
+
+
+const provider = providers.getDefaultProvider("ropsten");
+console.log(TokenRegistryFactory.connect("0x123", provider))

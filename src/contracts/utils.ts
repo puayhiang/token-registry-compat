@@ -1,86 +1,91 @@
-import { Wallet, providers.Provider } from "ethers";
+import { TradeTrustERC721Factory as V3ERC721} from "@govtechsg/token-registry-v3";
+import { TradeTrustERC721Factory as V2ERC721 } from "@govtechsg/token-registry-v3";
+import { Contract, Signer } from "ethers";
+import { Provider } from "@ethersproject/abstract-provider";
+import { TokenRegistryCompat } from "./TradeTrustERC721/TokenRegistryCompat";
+import { ERC165__factory } from "@govtechsg/token-registry-v3/dist/types/contracts";
 
-interface ConnectToTokenRegistryArgs {
-  address: string;
-  wallet: Wallet | ConnectedSigner;
+const staticCall = true;
+
+
+// use test - "should have the correct ERC165 interface support" - to figure out the interfaceId
+export enum TokenRegistryVersion {
+  V2 = "0x9f9e69f3",
+  V3 = "0x14ac11d9",
+  INVALID = "0x00000000"
 }
 
-interface ConnectToTokenReturnType {
-  contract: TradeTrustERC721 | V2TradeTrustERC721;
-  isV3: boolean;
+export enum TitleEscrowVersion {
+  V2 = "0xdcce2211",
+  V3 = "0x1676e9e0",
+  INVALID = "0x00000000"
 }
 
-//   interfaceId Title                 interfaceId     V2     V3
-// --------------------------------- -------------- ------- -------
-//  _INTERFACE_ID_ERC165              0x01ffc9a7     true    true
-//  _INTERFACE_ID_ERC721              0x80ac58cd     true    true
-//  _INTERFACE_ID_ERC721_ENUMERABLE   0x780e9d63     true    false
-//  _INTERFACE_ID_ERC721_METADATA     0x5b5e139f     true    true
-//  _INTERFACE_ID_TRADETRUST_ERC721   0x9f9e69f3     true    false
-//  _INTERFACE_ID_TITLEESCROW         0xdcce2211     false   false
-export const checkTokenRegistryVersion = async ({ address, wallet }: ConnectToTokenRegistryArgs): Promise<boolean> => {
-  const tradeTrustERC721Interfaces: TradeTrustERC721Interface = TradeTrustERC721Factory.createInterface();
-  const supportInterfacesFunctionFragment: FunctionFragment =
-    tradeTrustERC721Interfaces.functions["supportsInterface(bytes4)"];
-  const supportInterfacesInterface: string = supportInterfacesFunctionFragment.format(utils.FormatTypes.full);
-  const testContract: Contract = new Contract(address, JSON.stringify([supportInterfacesInterface]), wallet);
-  const connectedTestContract: Contract = testContract.connect(wallet);
-
-  const isV2 = await connectedTestContract.callStatic["supportsInterface(bytes4)"]("0x9f9e69f3");
-  const isV3 = !isV2;
-  return isV3;
+export const getTokenRegistryVersion = async (address: string, signerOrProvider: Signer | Provider): Promise<TokenRegistryVersion> => {
+  const contractInstance = ERC165__factory.connect(address,signerOrProvider);
+  for (let version in TokenRegistryVersion){
+    const supported = await supportsInterface(contractInstance, version as string, staticCall);
+    if(supported === true){
+      return version as TokenRegistryVersion;
+    }
+  }
+  return TokenRegistryVersion.INVALID;
 };
 
-export const connectToTokenRegistry = async ({
-  address,
-  wallet,
-}: ConnectToTokenRegistryArgs): Promise<ConnectToTokenReturnType> => {
-  const isV3 = await checkTokenRegistryVersion({ address, wallet });
-  if (isV3) {
-    const tokenRegistry = await TradeTrustERC721Factory.connect(address, wallet);
-    return { isV3: isV3, contract: tokenRegistry };
+export const connectToTokenRegistry = async (
+  address: string, signerOrProvider: Signer | Provider
+): Promise<TokenRegistryCompat> => {
+  const version: TokenRegistryVersion = await getTokenRegistryVersion( address, signerOrProvider );
+  if (version === TokenRegistryVersion.V3) {
+    return await V3ERC721.connect(address, signerOrProvider) as TokenRegistryCompat;
+  } else if (version === TokenRegistryVersion.V2) {
+    return await V2ERC721.connect(address, signerOrProvider) as TokenRegistryCompat;
   } else {
-    const tokenRegistry = await TradeTrustErc721Factory.connect(address, wallet);
-    return { isV3: isV3, contract: tokenRegistry };
+    throw new Error("Token Registry Version no longer supported");
   }
 };
 
-interface ConnectToTitleEscrowArgs {
-  tokenId: string;
-  address: string;
-  wallet: Wallet | ConnectedSigner;
-}
+// interface ConnectToTitleEscrowArgs {
+//   tokenId: string;
+//   address: string;
+//   wallet: Wallet | ConnectedSigner;
+// }
 
-interface ConnectToTitleEscrowReturnType {
-  isV3: boolean;
-  contract: TitleEscrowInstanceType;
-}
+// interface ConnectToTitleEscrowReturnType {
+//   isV3: boolean;
+//   contract: TitleEscrowInstanceType;
+// }
 
-type TitleEscrowInstanceType = ReturnType<
-  typeof TitleEscrowCloneableFactory.connect | typeof TitleEscrowFactory.connect
->;
+// type TitleEscrowInstanceType = ReturnType<
+//   typeof TitleEscrowCloneableFactory.connect | typeof TitleEscrowFactory.connect
+// >;
 
-export const connectToTitleEscrow = async ({
-  tokenId,
-  address,
-  wallet,
-}: ConnectToTitleEscrowArgs): Promise<ConnectToTitleEscrowReturnType> => {
-  const { isV3, contract: tokenRegistry } = await connectToTokenRegistry({ address, wallet });
-  const titleEscrowAddress = await tokenRegistry.ownerOf(tokenId);
-  return { isV3: isV3, contract: await connectToTitleEscrowFactory(isV3, titleEscrowAddress, wallet) };
-};
 
-export const connectToTitleEscrowFactory = async (
-  isV3: boolean,
-  titleEscrowAddress: string,
-  wallet: Wallet | ConnectedSigner
-): Promise<TitleEscrowInstanceType> => {
-  if (isV3) {
-    return await TitleEscrowCloneableFactory.connect(titleEscrowAddress, wallet);
-  } else {
-    return await TitleEscrowFactory.connect(titleEscrowAddress, wallet);
+export const getTitleEscrowVersion = async (address: string, signerOrProvider: Signer | Provider): Promise<TitleEscrowVersion> => {
+  const contractInstance = ERC165__factory.connect(address,signerOrProvider);
+  for (let version in TitleEscrowVersion){
+    const supported = await supportsInterface(contractInstance, version as string, staticCall);
+    if(supported === true){
+      return version as TitleEscrowVersion;
+    }
   }
+  return TitleEscrowVersion.INVALID;
 };
+
+// export const connectToTitleEscrow = async (
+//   tokenId: string,
+//   tokenRegistryAddress: string,
+//   signerOrProvider: Signer | Provider,
+// ): Promise<TitleEscrowCompat> => {
+//   const tokenRegistry: TokenRegistryCompat = await connectToTokenRegistry(tokenRegistryAddress, signerOrProvider);
+//   const titleEscrowAddress = await tokenRegistry.ownerOf(tokenId);
+//   const version = await getTitleEscrowVersion(titleEscrowAddress, signerOrProvider);
+//   if (version === TitleEscrowVersion.V3) {
+//     return await V3TitleEscrow.connect(titleEscrowAddress, signerOrProvider) as TitleEscrowCompat;
+//   } else if (version === TitleEscrowVersion.V2) {
+//     return await V2TitleEscrow.connect(titleEscrowAddress, signerOrProvider) as TitleEscrowCompat;
+//   }
+// };
 
 interface Erc165Contract extends Contract {
   supportsInterface: (interfaceId: string) => Promise<boolean>;
@@ -90,7 +95,7 @@ export const supportsInterface = async (
   contractInstance: Erc165Contract,
   interfaceId: string,
   staticCall = true
-): Promise<boolean | undefined> => {
+): Promise<boolean> => {
   let isSameInterfaceType;
   try {
     if (staticCall) {
@@ -104,8 +109,8 @@ export const supportsInterface = async (
       if (e.message.includes("revert") || e.message.includes("cannot estimate gas")) {
         return false;
       }
-      throw e;
     }
+    throw e;
   }
 };
 
