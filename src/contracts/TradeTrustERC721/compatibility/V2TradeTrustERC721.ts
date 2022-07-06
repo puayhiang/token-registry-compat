@@ -1,16 +1,24 @@
-// import { TradeTrustERC721 } from "@govtechsg/token-registry-v2/dist/types/contracts";
 
-import { TradeTrustERC721 } from "@govtechsg/token-registry-v2/dist/types/contracts";
+import { TokenRegistryCompat } from "../TokenRegistryCompat";
+import { V2TokenRegistry } from "./V2TokenRegistry";
+// import { TradeTrustERC721 as V2TradeTrustERC721} from "@govtechsg/token-registry-v2/dist/types/contracts";
 
-declare module "@govtechsg/token-registry-v3/dist/types/contracts" {
-  interface TradeTrustERC721 {
-    test(test_input: string): string;
-  }
+// import { ethers } from "ethers"
+
+// console.log(V2TokenRegistry)
+// declare module "@govtechsg/token-registry-v3/dist/types/contracts" {
+//   interface TradeTrustERC721 {
+//     test(test_input: string): string;
+//   }
+// }
+
+export function v2Parity (registry: TokenRegistryCompat ): V2TokenRegistry{
+  registry.test = (test_input: string) => {
+    return test_input + ":"
+  };
+  return registry;
 }
 
-TradeTrustERC721.prototype.test = (test_input) => {
-  return test_input + ":"
-};
 
 
 // V2TradeTrustERC721.prototype.estimateGas.mintTitle = function (beneficiary: string, holder: string, tokenId: BigNumberish, overrides?: Overrides & { from?: string | Promise<string> }) : Promise<BigNumber>{

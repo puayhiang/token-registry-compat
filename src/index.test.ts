@@ -1,6 +1,5 @@
 import { ethers, providers } from 'ethers';
 import { TokenRegistryFactory } from './contracts';
-import { connectToTokenRegistry, getTokenRegistryVersion } from './contracts/utils';
 
 
 describe("TradeTrustErc721", () => {
@@ -13,8 +12,8 @@ describe("TradeTrustErc721", () => {
       const tr = await TokenRegistryFactory.connect("0x8c66ab9629b412106aef03e76c06beee8d7224a5", connectedWallet)
 
       // console.log(await tr['mintTitle']('0x8c66ab9629b412106aef03e76c06beee8d7224a5','0x8c66ab9629b412106aef03e76c06beee8d7224a5','0x8c66ab9629b412106aef03e76c06beee8d7224a5'))
-      console.log(tr)
-      console.log(await tr['test'])
+      // console.log(tr)
+      console.log(await tr.test('rewrite'))
       // tr['mintTitle']()
       // console.log(tr)
       // expect(tr).toBeCalled()

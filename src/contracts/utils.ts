@@ -5,6 +5,7 @@ import { Provider } from "@ethersproject/abstract-provider";
 import { TokenRegistryCompat } from "./TradeTrustERC721/TokenRegistryCompat";
 import { ERC165Factory } from "./ERC165/ERC165Factory";
 import { ERC165 } from "./ERC165";
+import { v2Parity } from "./TradeTrustERC721/compatibility/V2TradeTrustERC721";
 
 const staticCall = true;
 
@@ -53,11 +54,14 @@ export const connectToTokenRegistry = async (
       signerOrProvider
     )) as TokenRegistryCompat;
   } else if (version === TokenRegistryVersion.V2) {
-    return (await V2ERC721.connect(
+    const registry = await V2ERC721.connect(
       address,
       signerOrProvider
-    )) as TokenRegistryCompat;
-  } else {
+    ) as TokenRegistryCompat;
+    return v2Parity(registry);
+    // return (;
+
+    } else {
     throw new Error("Token Registry Version no longer supported");
   }
 };
