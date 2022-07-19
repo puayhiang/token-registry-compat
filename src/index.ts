@@ -8,4 +8,4 @@
 //   TradeTrustERC721,
 // } from "./contracts";
 
-export { TokenRegistryCompat, TokenRegistryFactory } from './contracts';
+export { TokenRegistry, TokenRegistryFactory } from './contracts';

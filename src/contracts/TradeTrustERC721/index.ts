@@ -1,2 +1,2 @@
 export { TokenRegistryFactory } from './TokenRegistryFactory';
-export { TokenRegistryCompat } from './TokenRegistryCompat';
+export { TokenRegistry } from './TokenRegistry'

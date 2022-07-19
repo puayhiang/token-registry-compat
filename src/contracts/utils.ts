@@ -1,11 +1,15 @@
 import { TradeTrustERC721Factory as V3ERC721 } from "@govtechsg/token-registry-v3";
-import { TradeTrustERC721Factory as V2ERC721 } from "@govtechsg/token-registry-v3";
+import { TradeTrustErc721Factory as V2ERC721 } from "@govtechsg/token-registry-v2";
+
+import { TitleEscrowCloneableFactory as V3TitleEscrowFactory } from "@govtechsg/token-registry-v3";
+import { TitleEscrowFactory as V2TitleEscrowFactory } from "@govtechsg/token-registry-v2";
+
 import { Signer } from "ethers";
 import { Provider } from "@ethersproject/abstract-provider";
-import { TokenRegistryCompat } from "./TradeTrustERC721/TokenRegistryCompat";
 import { ERC165Factory } from "./ERC165/ERC165Factory";
 import { ERC165 } from "./ERC165";
-import { v2Parity } from "./TradeTrustERC721/compatibility/V2TradeTrustERC721";
+import { TokenRegistry } from './TradeTrustERC721/TokenRegistry'
+import { TitleEscrow } from './TitleEscrow/TitlesEscrow';
 
 const staticCall = true;
 
@@ -43,24 +47,24 @@ export const getTokenRegistryVersion = async (
 export const connectToTokenRegistry = async (
   address: string,
   signerOrProvider: Signer | Provider
-): Promise<TokenRegistryCompat> => {
+): Promise<TokenRegistry> => {
   const version: TokenRegistryVersion = await getTokenRegistryVersion(
     address,
     signerOrProvider
   );
   if (version === TokenRegistryVersion.V3) {
-    return (await V3ERC721.connect(
+
+    const registry = await V3ERC721.connect(
       address,
       signerOrProvider
-    )) as TokenRegistryCompat;
+    )
+    return (new TokenRegistry(registry, version));
   } else if (version === TokenRegistryVersion.V2) {
     const registry = await V2ERC721.connect(
       address,
       signerOrProvider
-    ) as TokenRegistryCompat;
-    return v2Parity(registry);
-    // return (;
-
+    );
+    return (new TokenRegistry(registry, version));
     } else {
     throw new Error("Token Registry Version no longer supported");
   }
@@ -85,20 +89,42 @@ export const getTitleEscrowVersion = async (
   return TitleEscrowVersion.INVALID;
 };
 
-// export const connectToTitleEscrow = async (
-//   tokenId: string,
-//   tokenRegistryAddress: string,
-//   signerOrProvider: Signer | Provider,
-// ): Promise<TitleEscrowCompat> => {
-//   const tokenRegistry: TokenRegistryCompat = await connectToTokenRegistry(tokenRegistryAddress, signerOrProvider);
-//   const titleEscrowAddress = await tokenRegistry.ownerOf(tokenId);
-//   const version = await getTitleEscrowVersion(titleEscrowAddress, signerOrProvider);
-//   if (version === TitleEscrowVersion.V3) {
-//     return await V3TitleEscrow.connect(titleEscrowAddress, signerOrProvider) as TitleEscrowCompat;
-//   } else if (version === TitleEscrowVersion.V2) {
-//     return await V2TitleEscrow.connect(titleEscrowAddress, signerOrProvider) as TitleEscrowCompat;
-//   }
-// };
+
+export const connectToTitleEscrow = async (
+  address: string,
+  signerOrProvider: Signer | Provider
+): Promise<TitleEscrow> => {
+  const version: TitleEscrowVersion = await getTitleEscrowVersion(
+    address,
+    signerOrProvider
+  );
+  if (version === TitleEscrowVersion.V3) {
+
+    const registry = await V3TitleEscrowFactory.connect(
+      address,
+      signerOrProvider
+    )
+    return (new TitleEscrow(registry, version));
+  } else if (version === TitleEscrowVersion.V2) {
+    const registry = await V2TitleEscrowFactory.connect(
+      address,
+      signerOrProvider
+    );
+    return (new TitleEscrow(registry, version));
+    } else {
+    throw new Error("Token Registry Version no longer supported");
+  }
+};
+
+export const connectToToken = async (
+  tokenId: string,
+  tokenRegistryAddress: string,
+  signerOrProvider: Signer | Provider,
+): Promise<TitleEscrow> => {
+  const tokenRegistry: TokenRegistry = await connectToTokenRegistry(tokenRegistryAddress, signerOrProvider);
+  const titleEscrowAddress = await tokenRegistry.ownerOf(tokenId);
+  return connectToTitleEscrow(titleEscrowAddress, signerOrProvider);
+};
 
 export const supportsInterface = async (
   contractInstance: ERC165,

@@ -14,19 +14,19 @@
   "scripts": {
     "build:js:copy-src": "babel src -d dist --ignore src/**/*.spec.ts,src/**/*.test.ts -x .js,.ts,.tsx --copy-files",
     "build:js": "tsc --emitDeclarationOnly && npm run build:js:copy-src",
-    "werk": "tsc --emitDeclarationOnly",
-    "build:js:copy-types": "mkdir -p ./dist/types && cp ./src/contracts/*.d.ts ./dist/types/contracts",
-    "build": "npm run clean:build && npm run build:js",
     "clean:build": "rm -rf ./dist",
+    "build": "npm run clean:build && npm run build:js",
     "commit": "git-cz",
     "commit:retry": "npm run commit -- --retry",
     "lint": "eslint test src --ext .js --ext .ts",
     "lint:fix": "npm run lint:js -- --fix",
-    "test": "jest --testPathPattern=src",
+    "test": "jest --testPathPattern=test",
     "prepare": "npm run build",
     "semantic-release": "semantic-release"
   },
   "jest": {
+    "globalSetup": "./jest/setup.ts",
+    "globalTeardown": "./jest/teardown.ts",
     "testPathIgnorePatterns": [
       "/node_modules",
       "/build",
@@ -36,8 +36,7 @@
   "dependencies": {
     "@govtechsg/token-registry-v2": "npm:@puayhiang/token-registry@^1.0.1",
     "@govtechsg/token-registry-v3": "npm:@govtechsg/token-registry@^3.2.0",
-    "ethers": "5.4.7",
-    "typescript": "^4.2.3"
+    "ethers": ">=5.4.7"
   },
   "devDependencies": {
     "@babel/cli": "^7.13.16",
@@ -69,6 +68,7 @@
     "eslint-plugin-chai-friendly": "^0.6.0",
     "eslint-plugin-import": "^2.20.0",
     "eslint-plugin-prettier": "^3.1.2",
+    "ethereum-waffle": "^3.4.0",
     "git-cz": "^4.7.6",
     "jest": "^27.2.4",
     "prettier": "^2.4.1",

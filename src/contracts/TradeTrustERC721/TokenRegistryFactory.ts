@@ -2,7 +2,7 @@ import { TradeTrustERC721Factory as V3TradeTrustERC721Factory } from "@govtechsg
 import { Overrides, Signer } from "ethers";
 import { Provider, TransactionRequest } from "@ethersproject/abstract-provider";
 import {connectToTokenRegistry, TokenRegistryVersion} from '../utils'
-import { TokenRegistryCompat } from "./TokenRegistryCompat";
+import { TokenRegistry } from "./TokenRegistry";
 
 export class TokenRegistryFactory {
 
@@ -24,22 +24,14 @@ export class TokenRegistryFactory {
         }
     }
 
-    checkRegistryFactory(): void{
-        if(typeof this.registryFactory === "undefined"){
-            throw new Error("Registry unintialized before call");
-        }
+    async deploy(name: string, symbol: string, overrides?: Overrides): Promise<TokenRegistry>{
+        this.checkSigner();
+        const instance = new TokenRegistry(await this.registryFactory.deploy(name, symbol, overrides), TokenRegistryFactory.version)
+        return instance;
     }
-
-    deploy(name: string, symbol: string, overrides?: Overrides): Promise<TokenRegistryCompat>{
-        this.checkSigner()
-        this.checkRegistryFactory()
-        return this.registryFactory.deploy(name, symbol, overrides) as Promise<TokenRegistryCompat>;
-    }
-
 
     getDeployTransaction(name: string, symbol: string, overrides?: Overrides): TransactionRequest{
         this.checkSigner()
-        this.checkRegistryFactory()
         return this.registryFactory.getDeployTransaction(name, symbol, overrides);
     }
 
@@ -49,10 +41,10 @@ export class TokenRegistryFactory {
         return this;
     }
 
-    static async connect(address: string, signerOrProvider: Signer | Provider): Promise<TokenRegistryCompat>{
+    static async connect(address: string, signerOrProvider: Signer | Provider): Promise<TokenRegistry>{
         this.address = address;
         const registry = await connectToTokenRegistry(TokenRegistryFactory.address, signerOrProvider);
-        return registry as TokenRegistryCompat;
+        return registry as TokenRegistry;
     };
 
     static createInterface(){
