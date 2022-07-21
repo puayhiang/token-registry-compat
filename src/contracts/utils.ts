@@ -9,7 +9,7 @@ import { Provider } from "@ethersproject/abstract-provider";
 import { ERC165Factory } from "./ERC165/ERC165Factory";
 import { ERC165 } from "./ERC165";
 import { TokenRegistry } from './TradeTrustERC721/TokenRegistry'
-import { TitleEscrow } from './TitleEscrow/TitlesEscrow';
+import { TitleEscrow } from './TitleEscrow/TitleEscrow';
 
 const staticCall = true;
 
@@ -99,7 +99,6 @@ export const connectToTitleEscrow = async (
     signerOrProvider
   );
   if (version === TitleEscrowVersion.V3) {
-
     const registry = await V3TitleEscrowFactory.connect(
       address,
       signerOrProvider

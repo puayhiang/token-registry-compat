@@ -1,4 +1,4 @@
-// export { TitleEscrowCloneableFactory } from './TitleEscrowCloneableFactory';
-// export { TitleEscrowCloneable } from './TitleEscrowCloneable/TitleEscrowCloneable';
-export { TitleEscrowClonerFactory } from './TitleEscrowClonerFactory';
-export { TitleEscrowCloner } from './TitleEscrowCloner';
+export { TitleEscrow } from './TitleEscrow';
+export { TitleEscrowFactory } from './TitleEscrowFactory';
+// export { TitleEscrowClonerFactory } from './TitleEscrowClonerFactory';
+// export { TitleEscrowCloner } from './TitleEscrowCloner';

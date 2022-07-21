@@ -2,7 +2,7 @@ import { TitleEscrowFactory as V2TitleEscrowFactory } from "@govtechsg/token-reg
 import { TitleEscrowCloneableFactory as V3TitleEscrowFactory } from "@govtechsg/token-registry-v3";
 import { Signer, ContractFactory, Overrides } from "ethers";
 import { Provider, TransactionRequest } from "@ethersproject/providers";
-import { TitleEscrow } from "./TitlesEscrow";
+import { TitleEscrow } from "./TitleEscrow";
 import { connectToTitleEscrow, TitleEscrowVersion, TokenRegistryVersion } from "../utils";
 import { TitleEscrowCompat } from "./TitleEscrowCompat";
 
@@ -68,11 +68,6 @@ export class TitleEscrowFactory {
       const chainId = await this.signer.getChainId();
       _titleEscrowFactoryAddress = this.V2_CREATOR_CONTRACTS[chainId];
     }
-    console.log(_tokenRegistry)
-    console.log(_beneficiary)
-    console.log(_holder)
-    console.log(_titleEscrowFactoryAddress)
-    console.log(overrides)
     this.checkValidV2Deploy(_tokenRegistry, _beneficiary, _holder, _titleEscrowFactoryAddress);
     const V2FactoryInstance = await new V2TitleEscrowFactory(this.signer);
     return V2FactoryInstance.deploy(_tokenRegistry!, _beneficiary!, _holder!, _titleEscrowFactoryAddress!, overrides);

@@ -8,8 +8,8 @@ export class TokenRegistryFactory {
 
     static address: string;
     static version: TokenRegistryVersion;
-    static defaultFactory: typeof V3TradeTrustERC721Factory;
-    registryFactory!: V3TradeTrustERC721Factory;
+    // static defaultFactory: typeof V3TradeTrustERC721Factory;
+    // registryFactory!: V3TradeTrustERC721Factory;
     signer!: Signer;
 
     constructor(signer?: Signer){
@@ -26,19 +26,20 @@ export class TokenRegistryFactory {
 
     async deploy(name: string, symbol: string, overrides?: Overrides): Promise<TokenRegistry>{
         this.checkSigner();
-        const instance = new TokenRegistry(await this.registryFactory.deploy(name, symbol, overrides), TokenRegistryFactory.version)
+        const factory = new V3TradeTrustERC721Factory(this.signer);
+        const V3TokenRegistry = await factory.deploy(name, symbol, overrides);
+        const instance = new TokenRegistry(V3TokenRegistry, TokenRegistryVersion.V3)
         return instance;
     }
 
     getDeployTransaction(name: string, symbol: string, overrides?: Overrides): TransactionRequest{
         this.checkSigner()
-        return this.registryFactory.getDeployTransaction(name, symbol, overrides);
+        const factory = new V3TradeTrustERC721Factory(this.signer);
+        return factory.getDeployTransaction(name, symbol, overrides);
     }
 
     connect(signer: Signer): TokenRegistryFactory {
-        this.signer = signer;
-        this.registryFactory = new TokenRegistryFactory.defaultFactory(signer);
-        return this;
+        return new TokenRegistryFactory(signer);
     }
 
     static async connect(address: string, signerOrProvider: Signer | Provider): Promise<TokenRegistry>{
@@ -48,7 +49,7 @@ export class TokenRegistryFactory {
     };
 
     static createInterface(){
-        return (this.defaultFactory).createInterface();
+        return V3TradeTrustERC721Factory.createInterface();
     }
 
 }

@@ -18,7 +18,7 @@ import {
   DeployTitleEscrowType,
   TitleEscrowFactory,
 } from "../TitleEscrow/TitleEscrowFactory";
-import { TitleEscrow } from "../TitleEscrow/TitlesEscrow";
+import { TitleEscrow } from "../TitleEscrow/TitleEscrow";
 
 interface Raw {
   connect:
@@ -242,18 +242,22 @@ export class TokenRegistry {
   }
 
   // DEFAULT_ADMIN_ROLE(overrides?: CallOverrides): Promise<string>{
+    // overrides = overrides ?? {}
   //   this.registry.DEFAULT_ADMIN_ROLE()
   // }
 
   // "DEFAULT_ADMIN_ROLE()"(overrides?: CallOverrides): Promise<string>{
+    // overrides = overrides ?? {}
   //   this.registry["DEFAULT_ADMIN_ROLE()"]()
   // }
 
   // MINTER_ROLE(overrides?: CallOverrides): Promise<string>{
+    // overrides = overrides ?? {}
   //   this.registry.MINTER_ROLE()
   // }
 
   // "MINTER_ROLE()"(overrides?: CallOverrides): Promise<string>{
+    // overrides = overrides ?? {}
   //   this.registry["MINTER_ROLE()"]()
   // }
 
@@ -284,10 +288,12 @@ export class TokenRegistry {
     tokenId: BigNumberish,
     overrides?: CallOverrides
   ): Promise<string> {
+    overrides = overrides ?? {}
     return this.registry.getApproved(tokenId, overrides);
   }
 
   // getRoleAdmin(role: BytesLike, overrides?: CallOverrides): Promise<string>{
+    // overrides = overrides ?? {}
   //   return this.registry.getRoleAdmin(role, overrides);
   // }
 
@@ -295,6 +301,7 @@ export class TokenRegistry {
   //   role: BytesLike,
   //   index: BigNumberish,
   //   overrides?: CallOverrides
+  // overrides = overrides ?? {}
   // ): Promise<string>{
   //   return this.registry.getRoleMember(role, index, overrides);
   // }
@@ -302,6 +309,7 @@ export class TokenRegistry {
   // getRoleMemberCount(
   //   role: BytesLike,
   //   overrides?: CallOverrides
+  // overrides = overrides ?? {}
   // ): Promise<BigNumber>{
   //   return this.registry.getRoleMemberCount(role, overrides);
   // }
@@ -319,6 +327,7 @@ export class TokenRegistry {
   //   role: BytesLike,
   //   account: string,
   //   overrides?: CallOverrides
+  // overrides = overrides ?? {}
   // ): Promise<boolean>{
   //   return this.registry.hasRole(role, account, overrides);
   // }
@@ -328,14 +337,17 @@ export class TokenRegistry {
     operator: string,
     overrides?: CallOverrides
   ): Promise<boolean> {
+    overrides = overrides ?? {}
     return this.registry.isApprovedForAll(owner, operator, overrides);
   }
 
   isMinter(account: string, overrides?: CallOverrides): Promise<boolean> {
+    overrides = overrides ?? {}
     return this.registry.isMinter(account, overrides);
   }
 
   name(overrides?: CallOverrides): Promise<string> {
+    overrides = overrides ?? {}
     return this.registry.name(overrides);
   }
 
@@ -357,6 +369,7 @@ export class TokenRegistry {
   }
 
   ownerOf(tokenId: BigNumberish, overrides?: CallOverrides): Promise<string> {
+    overrides = overrides ?? {}
     return this.registry.ownerOf(tokenId, overrides);
   }
 
@@ -376,15 +389,26 @@ export class TokenRegistry {
   //   return this.registry.renounceRole(role, account, overrides);
   // }
 
-  // restoreTitle(
-  //   beneficiary: string,
-  //   holder: string,
-  //   tokenId: BigNumberish,
-  //   overrides?: Overrides & { from?: string | Promise<string> }
-  // ): Promise<ContractTransaction>{
-    // overrides = overrides ?? {}
-  //   return this.registry.restoreTitle(beneficiary, holder, tokenId, overrides);
-  // }
+  restoreTitle(
+    beneficiary: string,
+    holder: string,
+    tokenId: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>{
+    overrides = overrides ?? {}
+    const version = this.version;
+    if (version === TokenRegistryVersion.V3) {
+      const registry = this.registry as V3TradeTrustERC721;
+      registry.callStatic.restoreTitle(beneficiary, holder, tokenId, overrides);
+      return registry.restoreTitle(beneficiary, holder, tokenId, overrides);
+    } else if (version === TokenRegistryVersion.V2) {
+      const registry = this.registry as V2TradeTrustERC721;
+      registry.callStatic.sendToNewTitleEscrow(beneficiary, holder, tokenId, overrides);
+      return registry.sendToNewTitleEscrow(beneficiary, holder, tokenId, overrides);
+    }else{
+      throw new Error("Unsupported Token Registry Version");
+    }
+  }
 
   // revokeRole(
   //   role: BytesLike,
@@ -408,18 +432,22 @@ export class TokenRegistry {
     interfaceId: BytesLike,
     overrides?: CallOverrides
   ): Promise<boolean> {
+    overrides = overrides ?? {}
     return this.registry.supportsInterface(interfaceId, overrides);
   }
 
   symbol(overrides?: CallOverrides): Promise<string> {
+    overrides = overrides ?? {}
     return this.registry.symbol(overrides);
   }
 
   // titleEscrowImplementation(overrides?: CallOverrides): Promise<string>{
+    // overrides = overrides ?? {}
   //   return this.registry.titleEscrowImplementation(overrides);
   // }
 
   tokenURI(tokenId: BigNumberish, overrides?: CallOverrides): Promise<string> {
+    overrides = overrides ?? {}
     return this.registry.tokenURI(tokenId, overrides);
   }
 
@@ -450,7 +478,6 @@ export class TokenRegistry {
         tokenId,
         overrides
       );
-
       return registry.mintTitle(beneficiary, holder, tokenId, overrides);
     } else if (version === TokenRegistryVersion.V2) {
       const registry = this.registry as V2TradeTrustERC721;
@@ -467,7 +494,7 @@ export class TokenRegistry {
         tokenId,
         overrides
       );
-      const safeMintTransaction = await registry["safeMint(address,uint256)"](holder, tokenId, overrides || {});
+      const safeMintTransaction = await registry["safeMint(address,uint256)"](holder, tokenId, overrides);
 
       if (holder !== beneficiary) {
         await titleEscrow.changeHolder(holder);
@@ -519,6 +546,7 @@ export class TokenRegistry {
   }
 
   balanceOf(owner: string, overrides?: CallOverrides): Promise<BigNumber> {
+    overrides = overrides ?? {}
     return this.registry.balanceOf(owner, overrides);
   }
 }

@@ -1,136 +1,167 @@
 const { expect } = require("chai").use(require("chai-as-promised"));
 const chai = require("chai");
-const { solidity } = require("ethereum-waffle");
-
+import { deployContract, MockProvider, solidity } from 'ethereum-waffle';
+import { ContractTransaction, ethers, providers, Wallet, Contract } from "ethers";
+import { TokenRegistryFactory, TokenRegistry, TitleEscrow } from "../src/contracts";
+import { TitleEscrowFactory } from '../src/contracts/TitleEscrow/TitleEscrowFactory';
+import { TokenRegistryVersion } from '../src/contracts/utils';
+import {deployTokenRegistry} from './utils'
 chai.use(solidity);
 
-const assertDestroyBurntLog = (logs, tokenId) => {
-  expect(logs.event).to.deep.equal("TokenBurnt");
-  expect(ethers.BigNumber.from(logs.args[0].toString()).toHexString()).to.deep.equal(tokenId);
-};
+// const assertDestroyBurntLog = (logs, tokenId) => {
+//   expect(logs.event).to.deep.equal("TokenBurnt");
+//   expect(ethers.BigNumber.from(logs.args[0].toString()).toHexString()).to.deep.equal(tokenId);
+// };
 
-const assertTokenReceivedLog = (logs, operator, from, tokenId) => {
-  expect(logs.event).to.deep.equal("TokenReceived");
-  expect(logs.args[0]).to.deep.equal(operator);
-  expect(logs.args[1]).to.deep.equal(from);
-  expect(ethers.BigNumber.from(logs.args[2].toString()).toHexString()).to.deep.equal(tokenId);
-};
+// const assertTokenReceivedLog = (logs, operator, from, tokenId) => {
+//   expect(logs.event).to.deep.equal("TokenReceived");
+//   expect(logs.args[0]).to.deep.equal(operator);
+//   expect(logs.args[1]).to.deep.equal(from);
+//   expect(ethers.BigNumber.from(logs.args[2].toString()).toHexString()).to.deep.equal(tokenId);
+// };
 
-describe("TradeTrustErc721", async () => {
+
+jest.setTimeout(60000);
+
+
+describe("Token Registry", () => {
+
+
   let carrier1;
   let owner1;
   let owner2;
   let nonMinter;
   let holder1;
-  let TitleEscrow;
-  let Erc721;
-
-  before("Initialising contract factories and accounts for TradeTrustErc721 tests", async () => {
-    [carrier1, owner1, owner2, nonMinter, holder1] = await ethers.getSigners();
-    TitleEscrow = await ethers.getContractFactory("TitleEscrowCloneableMock");
-    Erc721 = await ethers.getContractFactory("TradeTrustERC721Mock");
-  });
 
   const merkleRoot = "0x624d0d7ae6f44d41d368d8280856dbaac6aa29fb3b35f45b80a7c1c90032eeb3";
   const merkleRoot1 = "0x624d0d7ae6f44d41d368d8280856dbaac6aa29fb3b35f45b80a7c1c90032eeb4";
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   const BURN_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
-  it("should have the correct ERC165 interface support", async () => {
-    // should support
-    // 1. ITradeTrustERC721 (so the extra stuff we tacked on to ERC721 to handle surrender)
-    // 2. ITitleEscrowCreator (to act as a TE factory)
-    // 3. IERC721 (basic so that someone expecting a token registry knows how to work with it)
-
-    const tradeTrustERC721Instance = await Erc721.connect(carrier1).deploy("foo", "bar");
-    const ITradeTrustERC721InterfaceId = "0x14ac11d9";
-    const IERC721InterfaceId = "0x80ac58cd";
-    const ITitleEscrowCreatorInterfaceId = "0xfcd7c1df";
-    expect(await tradeTrustERC721Instance.supportsInterface(ITradeTrustERC721InterfaceId)).to.be.true;
-    expect(await tradeTrustERC721Instance.supportsInterface(IERC721InterfaceId)).to.be.true;
-    expect(await tradeTrustERC721Instance.supportsInterface(ITitleEscrowCreatorInterfaceId)).to.be.true;
+  describe('INTEGRATION: MockProvider', () => {
+    it('accepts options', () => {
+      const original = Wallet.createRandom();
+      const provider = new MockProvider({
+        ganacheOptions: {
+          accounts: [{ balance: '100', secretKey: original.privateKey }]
+        }
+      });
+      const wallets = provider.getWallets();
+      expect(wallets.length).to.equal(1);
+      expect(wallets[0].address).to.equal(original.address);
+    });
   });
 
-  it("should work without a wallet for read operations", async () => {
-    const tokenRegistryInstanceWithShippingLine = await Erc721.connect(carrier1).deploy("foo", "bar");
-    await tokenRegistryInstanceWithShippingLine.mintInternal(owner1.address, merkleRoot);
-    const currentOwner = await tokenRegistryInstanceWithShippingLine.ownerOf(merkleRoot);
-    expect(currentOwner).to.deep.equal(owner1.address);
+
+  it("should be able to deploy new token registry", async () => {
+    const connectedWallet = new MockProvider().getWallets()[0];
+    const registryFactory = new TokenRegistryFactory(
+      connectedWallet
+    );
+    const tokenRegistry = await registryFactory.deploy("TKN", "TKN");
+    expect(tokenRegistry).to.be.an.instanceOf(TokenRegistry)
   });
 
-  it("should not burn tokens that it receives", async () => {
-    const tokenRegistryInstanceWithShippingLine = await Erc721.connect(carrier1).deploy("foo", "bar");
-    await tokenRegistryInstanceWithShippingLine.mintInternal(owner1.address, merkleRoot);
-    const currentOwner = await tokenRegistryInstanceWithShippingLine.ownerOf(merkleRoot);
-    expect(currentOwner).to.deep.equal(owner1.address);
+  describe("Token Registry V3", () => {
 
-    await tokenRegistryInstanceWithShippingLine
-      .connect(owner1)
-      ["safeTransferFrom(address,address,uint256)"](
+    // let titleEscrow;
+    // let tokenRegistry;
+
+    // ("Initialising contract factories and accounts for TradeTrustErc721 tests",
+    beforeAll(async () => {
+      [carrier1, owner1, owner2, nonMinter, holder1] = new MockProvider().getWallets();
+    });
+
+
+
+    it("should have the correct ERC165 interface support", async () => {
+      const tokenRegistry = await deployTokenRegistry(carrier1);
+      expect(await tokenRegistry.supportsInterface(TokenRegistryVersion.V3)).to.be.true;
+    });
+
+
+    it("should work without a wallet for read operations", async () => {
+      const tokenRegistryInstanceWithShippingLine = await deployTokenRegistry(carrier1);
+      await tokenRegistryInstanceWithShippingLine.mintTitle(owner1.address, owner1.address, merkleRoot);
+      const currentOwner = await tokenRegistryInstanceWithShippingLine.ownerOf(merkleRoot);
+      // expect(currentOwner).to.deep.equal(owner1.address);
+    });
+
+    it("should not burn tokens that it receives", async () => {
+      const tokenRegistryInstanceWithShippingLine = await deployTokenRegistry(carrier1);
+      await tokenRegistryInstanceWithShippingLine.mintTitle(owner1.address, owner1.address, merkleRoot);
+      const currentOwner = await tokenRegistryInstanceWithShippingLine.ownerOf(merkleRoot);
+      // expect(currentOwner).to.deep.equal(owner1.address);
+
+      await tokenRegistryInstanceWithShippingLine
+        .connect(owner1)
+        .transferFrom(
+          owner1.address,
+          tokenRegistryInstanceWithShippingLine.address,
+          merkleRoot
+        );
+      const nextOwner = await tokenRegistryInstanceWithShippingLine.ownerOf(merkleRoot);
+      expect(nextOwner).to.deep.equal(tokenRegistryInstanceWithShippingLine.address);
+    });
+
+    it("should be able to mint", async () => {
+      const tokenRegistryInstance = await deployTokenRegistry(carrier1);
+      await tokenRegistryInstance.mintTitle(owner1.address, owner1.address, merkleRoot);
+      const currentOwner = await tokenRegistryInstance.ownerOf(merkleRoot);
+      // expect(currentOwner).to.deep.equal(owner1.address);
+    });
+
+    it("should be able to transfer", async () => {
+      const tokenRegistryInstanceWithShippingLineWallet = await deployTokenRegistry(carrier1);
+      await tokenRegistryInstanceWithShippingLineWallet.mintTitle(owner1.address, owner1.address, merkleRoot);
+      const currentOwner = await tokenRegistryInstanceWithShippingLineWallet.ownerOf(merkleRoot);
+      // expect(currentOwner).to.deep.equal(owner1.address);
+
+      await tokenRegistryInstanceWithShippingLineWallet
+        .connect(owner1)
+        .transferFrom(owner1.address, owner2.address, merkleRoot);
+      const nextOwner = await tokenRegistryInstanceWithShippingLineWallet.ownerOf(merkleRoot);
+      expect(nextOwner).to.deep.equal(owner2.address);
+    });
+
+    it("non-owner should not be able to initiate a transfer", async () => {
+      const tokenRegistryInstanceWithShippingLine = await deployTokenRegistry(carrier1);
+      await tokenRegistryInstanceWithShippingLine.mintTitle(owner1.address, owner1.address, merkleRoot);
+      const currentOwner = await tokenRegistryInstanceWithShippingLine.ownerOf(merkleRoot);
+      // expect(currentOwner).to.deep.equal(owner1.address);
+
+      const transferQuery = tokenRegistryInstanceWithShippingLine.transferFrom(
         owner1.address,
         tokenRegistryInstanceWithShippingLine.address,
         merkleRoot
       );
-    const nextOwner = await tokenRegistryInstanceWithShippingLine.ownerOf(merkleRoot);
-    expect(nextOwner).to.deep.equal(tokenRegistryInstanceWithShippingLine.address);
-  });
+      await expect(transferQuery).to.be.revertedWith("transfer caller is not owner nor approved");
+    });
 
-  it("should be able to mint", async () => {
-    const tokenRegistryInstance = await Erc721.connect(carrier1).deploy("foo", "bar");
-    await tokenRegistryInstance.mintInternal(owner1.address, merkleRoot);
-    const currentOwner = await tokenRegistryInstance.ownerOf(merkleRoot);
-    expect(currentOwner).to.deep.equal(owner1.address);
-  });
+    it("should emit TokenReceive event on safeMint", async () => {
+      const tokenRegistryInstance = await deployTokenRegistry(carrier1);
+      const tokenRegistryInstanceAddress = tokenRegistryInstance.address;
+      const mintTx = await (
+        await tokenRegistryInstanceWithShippingLine.mintTitle(carrier1.address, carrier1.address, merkleRoot)
+      ).wait();
+      const receivedTokenLog = mintTx.events.find((log) => log.event === "TokenReceived");
+      assertTokenReceivedLog(receivedTokenLog, carrier1.address, ZERO_ADDRESS, merkleRoot, null);
+    });
 
-  it("should be able to transfer", async () => {
-    const tokenRegistryInstanceWithShippingLineWallet = await Erc721.connect(carrier1).deploy("foo", "bar");
-    await tokenRegistryInstanceWithShippingLineWallet.mintInternal(owner1.address, merkleRoot);
-    const currentOwner = await tokenRegistryInstanceWithShippingLineWallet.ownerOf(merkleRoot);
-    expect(currentOwner).to.deep.equal(owner1.address);
 
-    await tokenRegistryInstanceWithShippingLineWallet
-      .connect(owner1)
-      ["safeTransferFrom(address,address,uint256)"](owner1.address, owner2.address, merkleRoot);
-    const nextOwner = await tokenRegistryInstanceWithShippingLineWallet.ownerOf(merkleRoot);
-    expect(nextOwner).to.deep.equal(owner2.address);
-  });
-
-  it("non-owner should not be able to initiate a transfer", async () => {
-    const tokenRegistryInstanceWithShippingLine = await Erc721.connect(carrier1).deploy("foo", "bar");
-    await tokenRegistryInstanceWithShippingLine.mintInternal(owner1.address, merkleRoot);
-    const currentOwner = await tokenRegistryInstanceWithShippingLine.ownerOf(merkleRoot);
-    expect(currentOwner).to.deep.equal(owner1.address);
-
-    const transferQuery = tokenRegistryInstanceWithShippingLine["safeTransferFrom(address,address,uint256)"](
-      owner1.address,
-      tokenRegistryInstanceWithShippingLine.address,
-      merkleRoot
-    );
-    await expect(transferQuery).to.be.revertedWith("transfer caller is not owner nor approved");
-  });
-
-  it("should emit TokenReceive event on safeMint", async () => {
-    const tokenRegistryInstance = await Erc721.connect(carrier1).deploy("foo", "bar");
-    const tokenRegistryInstanceAddress = tokenRegistryInstance.address;
-    const mintTx = await (
-      await tokenRegistryInstance["safeMintInternal(address,uint256)"](tokenRegistryInstanceAddress, merkleRoot)
-    ).wait();
-    const receivedTokenLog = mintTx.events.find((log) => log.event === "TokenReceived");
-    assertTokenReceivedLog(receivedTokenLog, carrier1.address, ZERO_ADDRESS, merkleRoot, null);
   });
 
   describe("Surrendered TradeTrustERC721 Work Flow", () => {
     let tokenRegistryInstanceWithShippingLineWallet;
     let tokenRegistryAddress;
 
-    beforeEach("Initialising fresh Token Registry and minting token for each test", async () => {
+    // "Initialising fresh Token Registry and minting token for each test",
+    beforeEach(async () => {
       // Starting test after the point of surrendering ERC721 Token
-      tokenRegistryInstanceWithShippingLineWallet = await Erc721.connect(carrier1).deploy("foo", "bar");
+      // [carrier1, owner1, owner2, nonMinter, holder1] = new MockProvider().getWallets();
+      tokenRegistryInstanceWithShippingLineWallet = deployTokenRegistry(carrier1)
       tokenRegistryAddress = tokenRegistryInstanceWithShippingLineWallet.address;
-      await tokenRegistryInstanceWithShippingLineWallet["safeMintInternal(address,uint256)"](
-        tokenRegistryAddress,
-        merkleRoot
-      );
+      await tokenRegistryInstanceWithShippingLineWallet.mintTitle(carrier1.address, carrier1.address, merkleRoot);
     });
 
     it("should be able to destroy token", async () => {
@@ -149,10 +180,7 @@ describe("TradeTrustErc721", async () => {
     });
 
     it("token cannot be destroyed if not owned by registry", async () => {
-      await tokenRegistryInstanceWithShippingLineWallet["safeMintInternal(address,uint256)"](
-        owner1.address,
-        merkleRoot1
-      );
+      await tokenRegistryInstanceWithShippingLineWallet.mintTitle(owner1.address, owner1.address, merkleRoot1);
       const attemptDestroyToken = tokenRegistryInstanceWithShippingLineWallet.destroyToken(merkleRoot1);
       await expect(attemptDestroyToken).to.be.revertedWith("Token has not been surrendered");
     });
@@ -201,10 +229,13 @@ describe("TradeTrustErc721", async () => {
       });
 
       it("should not allow a minter to restore a title not owned by registry", async () => {
-        await tokenRegistryInstanceWithShippingLineWallet["safeMintInternal(address,uint256)"](
+
+        await tokenRegistryInstanceWithShippingLineWallet.mintTitle(
           owner1.address,
-          merkleRoot1
+          owner1.address,
+          merkleRoot
         );
+
 
         const tx = tokenRegistryInstanceWithShippingLineWallet.restoreTitle(
           beneficiary.address,
@@ -241,7 +272,7 @@ describe("TradeTrustErc721", async () => {
       beforeEach(async () => {
         beneficiary = owner1;
         holder = holder1;
-        tokenRegistryInstanceWithShippingLineWallet = await Erc721.connect(carrier1).deploy("foo", "bar");
+        tokenRegistryInstanceWithShippingLineWallet = deployTokenRegistry(carrier1)
       });
 
       it("should mint a new title by a minter", async () => {
@@ -267,8 +298,10 @@ describe("TradeTrustErc721", async () => {
         const receipt = await tx.wait();
         const event = receipt.events.find((evt) => evt.event === "TitleEscrowDeployed");
         const titleEscrowAddr = event.args.escrowAddress;
+        // TODO
+        // const newEscrowInstance = await TitleEscrow.attach(titleEscrowAddr);
+        const newEscrowInstance = await TitleEscrowFactory.connect(titleEscrowAddr, carrier1);
 
-        const newEscrowInstance = await TitleEscrow.attach(titleEscrowAddr);
         const escrowBeneficiary = await newEscrowInstance.beneficiary();
         const escrowHolder = await newEscrowInstance.holder();
         const escrowTokenRegistry = await newEscrowInstance.tokenRegistry();

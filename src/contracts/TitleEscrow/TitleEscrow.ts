@@ -9,7 +9,7 @@ import {
   PopulatedTransaction,
   Signer,
 } from "ethers";
-import { TitleEscrowVersion, TokenRegistryVersion } from "../utils";
+import { connectToTitleEscrow, TitleEscrowVersion, TokenRegistryVersion } from "../utils";
 import { TitleEscrowCompat } from "./TitleEscrowCompat";
 import { Listener } from "@ethersproject/abstract-provider";
 import { TypedEvent, TypedEventFilter, TypedListener } from "../common";
@@ -186,6 +186,7 @@ export class TitleEscrow {
     newOwner: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>{
+    overrides = overrides ?? {}
     return this.titleEscrow.approveNewOwner(newOwner,overrides);
   }
 
@@ -194,6 +195,7 @@ export class TitleEscrow {
     newHolder: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>{
+    overrides = overrides ?? {}
     return this.titleEscrow.approveNewTransferTargets(newBeneficiary, newHolder, overrides);
   }
 
@@ -217,6 +219,7 @@ export class TitleEscrow {
     newHolder: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>{
+    overrides = overrides ?? {}
     return this.titleEscrow.changeHolder(newHolder, overrides);
   }
 
@@ -231,6 +234,7 @@ export class TitleEscrow {
     data: BytesLike,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>{
+    overrides = overrides ?? {}
     return this.titleEscrow.onERC721Received(operator, from, tokenId, data, overrides) ;
   }
 
@@ -253,18 +257,30 @@ export class TitleEscrow {
     return this.titleEscrow.tokenRegistry(overrides);
   }
 
-  // transferTo(
-  //   newOwner: string,
-  //   overrides?: Overrides & { from?: string | Promise<string> }
-  // ): Promise<ContractTransaction>{
-  //   return this.titleEscrow.transferTo(newOwner, overrides);
-  // }
+  async surrender(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>{
+    overrides = overrides ?? {}
+    const version = this.version;
+    if (version == TitleEscrowVersion.V2) {
+      const titleEscrow = this.titleEscrow as V2TitleEscrow;
+      const tokenRegistryAddress = await titleEscrow.tokenRegistry(overrides);
+      return titleEscrow.transferTo(tokenRegistryAddress, overrides);
+    } else if (version === TitleEscrowVersion.V3) {
+      const titleEscrow = this.titleEscrow as V3TitleEscrow;
+      return titleEscrow.surrender(overrides);
+    } else {
+      throw new Error("Unsupported Title Escrow Version");
+    }
+
+  }
 
   transferToNewEscrow(
     newBeneficiary: string,
     newHolder: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>{
+    overrides = overrides ?? {}
     return this.titleEscrow.transferToNewEscrow(newBeneficiary, newHolder, overrides);
   }
 
